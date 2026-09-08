@@ -9,6 +9,11 @@ const envSchema = z.object({
   CLIENT_URL: z.string().default('http://localhost:5173'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+  SMTP_HOST: z.string().default('smtp.ethereal.email'),
+  SMTP_PORT: z.string().default('587').transform((val) => parseInt(val, 10)),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('Mailora <noreply@mailora.local>'),
 });
 
 const parsed = envSchema.safeParse(process.env);
