@@ -1,0 +1,89 @@
+// Prisma schema for Mailora email scheduling platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  name            String?
+  avatar          String?
+  googleId        String?          @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  senders         Sender[]
+  emails          Email[]
+  slackConnection SlackConnection?
+
+  @@index([email])
+}
+
+model Sender {
+  id        String   @id @default(cuid())
+  email     String
+  name      String?
+  isDefault Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails    Email[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, email])
+  @@index([userId])
+}
+
+model Email {
+  id           String      @id @default(cuid())
+  recipient    String
+  subject      String
+  body         String      @db.Text
+  status       EmailStatus @default(PENDING)
+  scheduledAt  DateTime
+  sentAt       DateTime?
+  failedAt     DateTime?
+  errorMessage String?     @db.Text
+  jobId        String?     @unique
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senderId     String?
+  sender       Sender?     @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([userId, status])
+  @@index([status, scheduledAt])
+  @@index([scheduledAt])
+  @@index([userId, scheduledAt])
+}
+
+model SlackConnection {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slackUserId        String?
+  teamId             String?
+  teamName           String?
+  accessToken        String
+  incomingWebhookUrl String?
+  channelId          String?
+  channelName        String?
+  isConnected        Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+}
