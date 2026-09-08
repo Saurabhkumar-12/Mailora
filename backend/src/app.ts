@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import healthRoutes from './routes/health.js';
+import emailRoutes from './routes/email.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 export const createApp = (): Application => {
@@ -23,6 +24,7 @@ export const createApp = (): Application => {
 
   // Routes
   app.use('/api', healthRoutes);
+  app.use('/api/emails', emailRoutes);
 
   // Global Error Handler
   app.use(errorHandler);
