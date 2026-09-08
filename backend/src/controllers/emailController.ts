@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { EmailService } from '../services/emailService.js';
+import { SearchService } from '../services/searchService.js';
 import {
   scheduleEmailSchema,
   scheduleBatchEmailSchema,
   getEmailsQuerySchema,
 } from '../schemas/emailSchema.js';
+
 
 export class EmailController {
   /**
@@ -161,4 +163,29 @@ export class EmailController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/emails/search
+   */
+  static async search(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const parsed = getEmailsQuerySchema.safeParse(req.query);
+      const { page = 1, limit = 20, search = '' } = parsed.success
+        ? parsed.data
+        : { page: 1, limit: 20, search: '' };
+
+      const queryText = (req.query.q as string) || (req.query.query as string) || search || '';
+
+      const searchResult = await SearchService.searchEmails(queryText, page, limit);
+
+      res.status(200).json({
+        success: true,
+        query: queryText,
+        data: searchResult,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
+

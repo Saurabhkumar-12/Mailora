@@ -6,7 +6,9 @@ import { getRedisConnectionOptions, getCleanRedisUrl } from '../config/redis.js'
 import { EMAIL_QUEUE_NAME, EmailJobData } from '../queues/emailQueue.js';
 import { MailerService } from '../services/mailerService.js';
 import { RateLimiterService } from '../services/rateLimiterService.js';
+import { SearchService } from '../services/searchService.js';
 import { EmailStatus } from '@prisma/client';
+
 
 export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => {
   const { emailId } = job.data;
@@ -76,7 +78,7 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
     });
 
     // 6. Update state to SENT in PostgreSQL
-    await prisma.email.update({
+    const updated = await prisma.email.update({
       where: { id: emailId },
       data: {
         status: EmailStatus.SENT,
@@ -85,13 +87,16 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
       },
     });
 
+    // Idempotent Search Indexing (fails gracefully)
+    SearchService.indexEmail(updated).catch(() => {});
+
     console.log(`[Worker] Successfully sent email ${emailId}. Preview URL: ${result.previewUrl || 'N/A'}`);
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : 'Unknown mailer error';
     console.error(`[Worker Error] Failed to send email ${emailId}: ${errMessage}`);
 
     // Update state to FAILED in PostgreSQL
-    await prisma.email.update({
+    const failedEmail = await prisma.email.update({
       where: { id: emailId },
       data: {
         status: EmailStatus.FAILED,
@@ -100,9 +105,12 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
       },
     });
 
+    SearchService.indexEmail(failedEmail).catch(() => {});
+
     // Re-throw so BullMQ handles attempts and backoff
     throw error;
   }
+
 };
 
 export const createEmailWorker = (): Worker<EmailJobData> => {

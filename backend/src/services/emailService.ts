@@ -2,6 +2,8 @@ import { prisma } from '../config/db.js';
 import { emailQueue } from '../queues/emailQueue.js';
 import { ScheduleEmailInput, ScheduleBatchEmailInput } from '../schemas/emailSchema.js';
 import { EmailStatus } from '@prisma/client';
+import { SearchService } from './searchService.js';
+
 
 export class EmailService {
   /**
@@ -64,6 +66,9 @@ export class EmailService {
         data: { jobId: email.id },
       });
 
+      // 4. Asynchronously index in Elasticsearch (idempotent; fails gracefully)
+      SearchService.indexEmail(updated).catch(() => {});
+
       return {
         email: updated,
         queue: {
@@ -72,6 +77,7 @@ export class EmailService {
           scheduledFor: scheduledDate.toISOString(),
         },
       };
+
     } catch (queueError) {
       console.error('[Queue Error] Failed to enqueue email job:', queueError);
       // Mark as failed in DB if queue rejects it
@@ -250,6 +256,8 @@ export class EmailService {
       },
     });
 
+    SearchService.indexEmail(updated).catch(() => {});
+
     return { found: true, canCancel: true, email: updated };
   }
 
@@ -260,6 +268,8 @@ export class EmailService {
    */
   static async reconcilePendingEmails(): Promise<{ checked: number; recovered: number }> {
     console.log('🔄 Running email queue reconciliation scan...');
+    await SearchService.ensureIndexExists();
+
 
     const pendingOrProcessing = await prisma.email.findMany({
       where: {

@@ -17,7 +17,10 @@ const envSchema = z.object({
   WORKER_CONCURRENCY: z.string().default('5').transform((val) => Math.max(1, parseInt(val, 10) || 5)),
   MIN_SEND_DELAY_MS: z.string().default('1000').transform((val) => Math.max(0, parseInt(val, 10) || 1000)),
   MAX_EMAILS_PER_HOUR: z.string().default('100').transform((val) => Math.max(1, parseInt(val, 10) || 100)),
+  ELASTICSEARCH_NODE: z.string().url('ELASTICSEARCH_NODE must be a valid URL').optional(),
+  ELASTICSEARCH_API_KEY: z.string().min(1, 'ELASTICSEARCH_API_KEY cannot be empty').optional(),
 });
+
 
 const parsed = envSchema.safeParse(process.env);
 
