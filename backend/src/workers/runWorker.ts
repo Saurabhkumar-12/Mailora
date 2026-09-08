@@ -1,16 +1,27 @@
 import { createEmailWorker } from './emailWorker.js';
+import { EmailService } from '../services/emailService.js';
 
-console.log('⚡ Starting Mailora Email Worker...');
-const worker = createEmailWorker();
+async function bootstrap() {
+  console.log('⚡ Starting Mailora Email Worker...');
 
-console.log('✅ Email Worker active and waiting for BullMQ jobs.');
+  // Reconcile pending/missing jobs on startup
+  await EmailService.reconcilePendingEmails();
 
-const handleShutdown = async (signal: string) => {
-  console.log(`\nReceived ${signal}. Closing worker...`);
-  await worker.close();
-  console.log('Worker closed cleanly.');
-  process.exit(0);
-};
+  const worker = createEmailWorker();
+  console.log('✅ Email Worker active and waiting for BullMQ jobs.');
 
-process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-process.on('SIGINT', () => handleShutdown('SIGINT'));
+  const handleShutdown = async (signal: string) => {
+    console.log(`\nReceived ${signal}. Closing worker...`);
+    await worker.close();
+    console.log('Worker closed cleanly.');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+}
+
+bootstrap().catch((err) => {
+  console.error('Fatal worker startup error:', err);
+  process.exit(1);
+});
