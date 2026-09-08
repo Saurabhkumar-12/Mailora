@@ -14,6 +14,9 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('Mailora <noreply@mailora.local>'),
+  WORKER_CONCURRENCY: z.string().default('5').transform((val) => Math.max(1, parseInt(val, 10) || 5)),
+  MIN_SEND_DELAY_MS: z.string().default('1000').transform((val) => Math.max(0, parseInt(val, 10) || 1000)),
+  MAX_EMAILS_PER_HOUR: z.string().default('100').transform((val) => Math.max(1, parseInt(val, 10) || 100)),
 });
 
 const parsed = envSchema.safeParse(process.env);

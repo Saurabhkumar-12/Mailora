@@ -1,9 +1,11 @@
 import { Worker, Job, WorkerOptions } from 'bullmq';
 import { Redis } from 'ioredis';
 import { prisma } from '../config/db.js';
+import { env } from '../config/env.js';
 import { getRedisConnectionOptions, getCleanRedisUrl } from '../config/redis.js';
 import { EMAIL_QUEUE_NAME, EmailJobData } from '../queues/emailQueue.js';
 import { MailerService } from '../services/mailerService.js';
+import { RateLimiterService } from '../services/rateLimiterService.js';
 import { EmailStatus } from '@prisma/client';
 
 export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => {
@@ -21,7 +23,7 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
   }
 
   // Prevent duplicate sending if already SENT
-  if (email.status === EmailStatus.SENT) {
+  if (email.status === EmailStatus.SENT || email.sentAt !== null) {
     console.log(`[Worker] Email ${emailId} is already SENT. Skipping to prevent duplicate send.`);
     return;
   }
@@ -32,21 +34,48 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
     return;
   }
 
-  // 2. Transition state to PROCESSING
+  // 2. Hourly Rate Limit Check & Rescheduling
+  const quotaCheck = await RateLimiterService.acquireHourlyQuota(email.userId);
+
+  if (!quotaCheck.allowed && quotaCheck.delayToNextHourMs && quotaCheck.nextHour) {
+    console.warn(
+      `[Worker Rate Limit] ${quotaCheck.reason} Rescheduling email ${emailId} for next hour: ${quotaCheck.nextHour.toISOString()}`
+    );
+
+    // Update PostgreSQL scheduledAt to preserve source of truth & ordering
+    await prisma.email.update({
+      where: { id: emailId },
+      data: {
+        scheduledAt: quotaCheck.nextHour,
+        status: EmailStatus.PENDING,
+      },
+    });
+
+    // Reschedule in BullMQ to delayed queue without dropping or failing job
+    if (job.token) {
+      await job.moveToDelayed(Date.now() + quotaCheck.delayToNextHourMs, job.token);
+    }
+    return;
+  }
+
+  // 3. Enforce global minimum send delay spacing across all workers
+  await RateLimiterService.enforceMinSendDelay();
+
+  // 4. Transition state to PROCESSING
   await prisma.email.update({
     where: { id: emailId },
     data: { status: EmailStatus.PROCESSING },
   });
 
   try {
-    // 3. Send email via Nodemailer + Ethereal SMTP
+    // 5. Send email via Nodemailer + Ethereal SMTP
     const result = await MailerService.sendMail({
       to: email.recipient,
       subject: email.subject,
       body: email.body,
     });
 
-    // 4. Update state to SENT in PostgreSQL
+    // 6. Update state to SENT in PostgreSQL
     await prisma.email.update({
       where: { id: emailId },
       data: {
@@ -61,7 +90,7 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
     const errMessage = error instanceof Error ? error.message : 'Unknown mailer error';
     console.error(`[Worker Error] Failed to send email ${emailId}: ${errMessage}`);
 
-    // 5. Update state to FAILED in PostgreSQL
+    // Update state to FAILED in PostgreSQL
     await prisma.email.update({
       where: { id: emailId },
       data: {
@@ -79,6 +108,7 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
 export const createEmailWorker = (): Worker<EmailJobData> => {
   const workerOptions: WorkerOptions = {
     connection: new Redis(getCleanRedisUrl(), getRedisConnectionOptions()),
+    concurrency: env.WORKER_CONCURRENCY,
   };
 
   const worker = new Worker<EmailJobData>(EMAIL_QUEUE_NAME, processEmailJob, workerOptions);
