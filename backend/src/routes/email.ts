@@ -14,5 +14,6 @@ router.get('/sent', EmailController.getSent);
 router.get('/search', EmailController.search);
 router.get('/:id', EmailController.getById);
 router.delete('/:id', EmailController.cancel);
+router.post('/:id/cancel', EmailController.cancel);
 
 export default router;
