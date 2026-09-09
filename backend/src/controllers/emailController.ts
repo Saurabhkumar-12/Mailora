@@ -7,7 +7,6 @@ import {
   getEmailsQuerySchema,
 } from '../schemas/emailSchema.js';
 
-
 export class EmailController {
   /**
    * POST /api/emails/schedule
@@ -27,7 +26,9 @@ export class EmailController {
         return;
       }
 
-      const result = await EmailService.scheduleEmail(parsed.data);
+      // Enforce authenticated user ID from session
+      const userId = req.user?.id;
+      const result = await EmailService.scheduleEmail(parsed.data, userId);
       res.status(201).json({
         success: true,
         message: 'Email scheduled successfully',
@@ -56,7 +57,8 @@ export class EmailController {
         return;
       }
 
-      const result = await EmailService.scheduleBatch(parsed.data);
+      const userId = req.user?.id;
+      const result = await EmailService.scheduleBatch(parsed.data, userId);
       res.status(201).json({
         success: true,
         message: `Successfully scheduled batch of ${result.totalQueued} emails`,
@@ -75,7 +77,9 @@ export class EmailController {
       const parsed = getEmailsQuerySchema.safeParse(req.query);
       const { page = 1, limit = 20 } = parsed.success ? parsed.data : { page: 1, limit: 20 };
 
-      const result = await EmailService.getScheduledEmails(undefined, page, limit);
+      // Filter strictly by authenticated user ID
+      const userId = req.user?.id;
+      const result = await EmailService.getScheduledEmails(userId, page, limit);
       res.status(200).json({
         success: true,
         data: result.emails,
@@ -94,7 +98,8 @@ export class EmailController {
       const parsed = getEmailsQuerySchema.safeParse(req.query);
       const { page = 1, limit = 20 } = parsed.success ? parsed.data : { page: 1, limit: 20 };
 
-      const result = await EmailService.getSentEmails(undefined, page, limit);
+      const userId = req.user?.id;
+      const result = await EmailService.getSentEmails(userId, page, limit);
       res.status(200).json({
         success: true,
         data: result.emails,
@@ -111,7 +116,10 @@ export class EmailController {
   static async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const email = await EmailService.getEmailById(id);
+      const userId = req.user?.id;
+
+      // Enforce ownership check: email must belong to authenticated user
+      const email = await EmailService.getEmailById(id, userId);
 
       if (!email) {
         res.status(404).json({
@@ -136,7 +144,9 @@ export class EmailController {
   static async cancel(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const result = await EmailService.cancelEmail(id);
+      const userId = req.user?.id;
+
+      const result = await EmailService.cancelEmail(id, userId);
 
       if (!result.found) {
         res.status(404).json({
@@ -175,8 +185,10 @@ export class EmailController {
         : { page: 1, limit: 20, search: '' };
 
       const queryText = (req.query.q as string) || (req.query.query as string) || search || '';
+      const userId = req.user?.id;
 
-      const searchResult = await SearchService.searchEmails(queryText, page, limit);
+      // Enforce searching ONLY within the authenticated user's emails
+      const searchResult = await SearchService.searchEmails(queryText, page, limit, userId);
 
       res.status(200).json({
         success: true,
@@ -188,4 +200,3 @@ export class EmailController {
     }
   }
 }
-

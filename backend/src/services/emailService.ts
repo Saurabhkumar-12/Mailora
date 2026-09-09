@@ -204,11 +204,14 @@ export class EmailService {
   }
 
   /**
-   * Get single email by ID.
+   * Get single email by ID with optional user ownership check.
    */
-  static async getEmailById(id: string) {
-    return prisma.email.findUnique({
-      where: { id },
+  static async getEmailById(id: string, userId?: string) {
+    return prisma.email.findFirst({
+      where: {
+        id,
+        ...(userId ? { userId } : {}),
+      },
       include: {
         sender: { select: { id: true, email: true, name: true } },
         user: { select: { id: true, email: true, name: true } },
@@ -265,76 +268,104 @@ export class EmailService {
    * Startup Recovery & Reconciliation Service:
    * Scans PostgreSQL (source of truth) for PENDING or PROCESSING emails.
    * Restores missing BullMQ jobs with exact remaining delay.
+   * Includes retries for temporary database initialization/network latency.
    */
-  static async reconcilePendingEmails(): Promise<{ checked: number; recovered: number }> {
+  static async reconcilePendingEmails(
+    maxRetries = 3,
+    retryDelayMs = 2000
+  ): Promise<{ checked: number; recovered: number; success: boolean }> {
     console.log('🔄 Running email queue reconciliation scan...');
-    await SearchService.ensureIndexExists();
 
-
-    const pendingOrProcessing = await prisma.email.findMany({
-      where: {
-        status: { in: [EmailStatus.PENDING, EmailStatus.PROCESSING] },
-      },
-    });
-
-    let recoveredCount = 0;
-
-    for (const email of pendingOrProcessing) {
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      attempt++;
       try {
-        const existingJob = await emailQueue.getJob(email.id);
+        await SearchService.ensureIndexExists();
 
-        if (existingJob) {
-          const state = await existingJob.getState();
-          if (state === 'completed' && email.status !== EmailStatus.SENT) {
-            await prisma.email.update({
-              where: { id: email.id },
-              data: { status: EmailStatus.SENT, sentAt: new Date() },
-            });
-            console.log(`[Reconciliation] Synced email ${email.id} to SENT state.`);
-            recoveredCount++;
-            continue;
-          }
-          if (['active', 'delayed', 'waiting'].includes(state)) {
-            continue;
-          }
-        }
-
-        // Job missing from queue or was stuck in PROCESSING due to worker crash
-        if (email.status === EmailStatus.PROCESSING) {
-          await prisma.email.update({
-            where: { id: email.id },
-            data: { status: EmailStatus.PENDING },
-          });
-        }
-
-        const now = Date.now();
-        const delayMs = Math.max(0, new Date(email.scheduledAt).getTime() - now);
-
-        await emailQueue.add(
-          'send-email',
-          { emailId: email.id, userId: email.userId },
-          {
-            jobId: email.id,
-            delay: delayMs,
-          }
-        );
-
-        await prisma.email.update({
-          where: { id: email.id },
-          data: { jobId: email.id },
+        const pendingOrProcessing = await prisma.email.findMany({
+          where: {
+            status: { in: [EmailStatus.PENDING, EmailStatus.PROCESSING] },
+          },
         });
 
-        console.log(
-          `[Recovery] Restored missing BullMQ job for email ${email.id} (Scheduled: ${email.scheduledAt.toISOString()}, delay: ${delayMs}ms)`
+        let recoveredCount = 0;
+
+        for (const email of pendingOrProcessing) {
+          try {
+            const existingJob = await emailQueue.getJob(email.id);
+
+            if (existingJob) {
+              const state = await existingJob.getState();
+              if (state === 'completed' && email.status !== EmailStatus.SENT) {
+                await prisma.email.update({
+                  where: { id: email.id },
+                  data: { status: EmailStatus.SENT, sentAt: new Date() },
+                });
+                console.log(`[Reconciliation] Synced email ${email.id} to SENT state.`);
+                recoveredCount++;
+                continue;
+              }
+              if (['active', 'delayed', 'waiting'].includes(state)) {
+                continue;
+              }
+            }
+
+            // Job missing from queue or was stuck in PROCESSING due to worker crash
+            if (email.status === EmailStatus.PROCESSING) {
+              await prisma.email.update({
+                where: { id: email.id },
+                data: { status: EmailStatus.PENDING },
+              });
+            }
+
+            const now = Date.now();
+            const delayMs = Math.max(0, new Date(email.scheduledAt).getTime() - now);
+
+            await emailQueue.add(
+              'send-email',
+              { emailId: email.id, userId: email.userId },
+              {
+                jobId: email.id,
+                delay: delayMs,
+              }
+            );
+
+            await prisma.email.update({
+              where: { id: email.id },
+              data: { jobId: email.id },
+            });
+
+            console.log(
+              `[Recovery] Restored missing BullMQ job for email ${email.id} (Scheduled: ${email.scheduledAt.toISOString()}, delay: ${delayMs}ms)`
+            );
+            recoveredCount++;
+          } catch (jobErr: unknown) {
+            const errMessage = jobErr instanceof Error ? jobErr.message : String(jobErr);
+            console.error(`[Recovery Error] Failed to reconcile email ${email.id}: ${errMessage}`);
+          }
+        }
+
+        console.log(`✅ Reconciliation complete. Checked: ${pendingOrProcessing.length}, Recovered: ${recoveredCount}`);
+        return { checked: pendingOrProcessing.length, recovered: recoveredCount, success: true };
+      } catch (dbErr: unknown) {
+        const errMessage = dbErr instanceof Error ? dbErr.message : String(dbErr);
+        console.warn(
+          `[Reconciliation Warning] Attempt ${attempt}/${maxRetries} failed to reach database/search service: ${errMessage}`
         );
-        recoveredCount++;
-      } catch (err) {
-        console.error(`[Recovery Error] Failed to reconcile email ${email.id}:`, err);
+
+        if (attempt < maxRetries) {
+          console.log(`⏱️ Retrying reconciliation in ${retryDelayMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        } else {
+          console.error(
+            `❌ Email reconciliation failed after ${maxRetries} attempts. Backend process will remain running.`
+          );
+          return { checked: 0, recovered: 0, success: false };
+        }
       }
     }
 
-    console.log(`✅ Reconciliation complete. Checked: ${pendingOrProcessing.length}, Recovered: ${recoveredCount}`);
-    return { checked: pendingOrProcessing.length, recovered: recoveredCount };
+    return { checked: 0, recovered: 0, success: false };
   }
 }
 

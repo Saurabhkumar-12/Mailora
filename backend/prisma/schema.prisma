@@ -27,8 +27,21 @@ model User {
   senders         Sender[]
   emails          Email[]
   slackConnection SlackConnection?
+  sessions        Session[]
 
   @@index([email])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  sid       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Sender {

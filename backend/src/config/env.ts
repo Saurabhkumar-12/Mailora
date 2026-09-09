@@ -24,6 +24,11 @@ const envSchema = z.object({
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
   SLACK_REDIRECT_URI: z.string().default('http://localhost:5000/api/slack/oauth/callback'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
+  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters long'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().default('http://localhost:5000/api/auth/google/callback'),
 });
 
 

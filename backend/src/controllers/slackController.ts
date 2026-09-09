@@ -1,20 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { SlackService } from '../services/slackService.js';
-import { EmailService } from '../services/emailService.js';
-import { prisma } from '../config/db.js';
-
-/**
- * Helper to identify the current user ID for the request.
- * Uses query/header parameter if provided, otherwise defaults to the demo user.
- */
-const getUserIdFromReq = async (req: Request): Promise<string> => {
-  const customUserId = (req.query.userId as string) || (req.headers['x-user-id'] as string) || (req.body?.userId as string);
-  if (customUserId) {
-    const existing = await prisma.user.findUnique({ where: { id: customUserId } });
-    if (existing) return existing.id;
-  }
-  return EmailService.getOrCreateDefaultUser();
-};
 
 export class SlackController {
   /**
@@ -23,7 +8,12 @@ export class SlackController {
    */
   static async startOAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = await getUserIdFromReq(req);
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
+
       const { url } = await SlackService.buildAuthorizationUrl(userId);
 
       if (req.query.json === 'true' || req.headers.accept?.includes('application/json')) {
@@ -99,11 +89,16 @@ export class SlackController {
 
   /**
    * GET /api/slack/status
-   * Returns current Slack connection status without exposing sensitive tokens.
+   * Returns current authenticated user's Slack connection status.
    */
   static async getStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = await getUserIdFromReq(req);
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
+
       const status = await SlackService.getSlackStatus(userId);
 
       res.status(200).json({
@@ -117,11 +112,16 @@ export class SlackController {
 
   /**
    * POST /api/slack/disconnect
-   * Safely disconnects Slack integration.
+   * Safely disconnects Slack integration for the authenticated user.
    */
   static async disconnect(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = await getUserIdFromReq(req);
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
+
       const result = await SlackService.disconnectSlack(userId);
 
       res.status(200).json({
