@@ -37,7 +37,15 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
   }
 
   // 2. Hourly Rate Limit Check & Rescheduling
-  const quotaCheck = await RateLimiterService.acquireHourlyQuota(email.userId);
+  const quotaCheck = await RateLimiterService.acquireHourlyQuota(
+    email.userId,
+    email.senderId,
+    {
+      maxUserHourly: env.MAX_EMAILS_PER_HOUR,
+      maxSenderHourly: env.MAX_EMAILS_PER_SENDER_PER_HOUR,
+      maxGlobalHourly: env.MAX_GLOBAL_EMAILS_PER_HOUR,
+    }
+  );
 
   if (!quotaCheck.allowed && quotaCheck.delayToNextHourMs && quotaCheck.nextHour) {
     console.warn(
