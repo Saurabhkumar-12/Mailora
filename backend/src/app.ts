@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import healthRoutes from './routes/health.js';
 import emailRoutes from './routes/email.js';
+import slackRoutes from './routes/slack.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { bullBoardAuth } from './middleware/bullBoardAuth.js';
 import { serverAdapter } from './config/bullBoard.js';
@@ -27,6 +28,7 @@ export const createApp = (): Application => {
   // API Routes
   app.use('/api', healthRoutes);
   app.use('/api/emails', emailRoutes);
+  app.use('/api/slack', slackRoutes);
 
   // Bull Board Dashboard (Protected by HTTP Basic Auth with route-specific CSP adjustment for UI assets)
   app.use(

@@ -7,8 +7,8 @@ import { EMAIL_QUEUE_NAME, EmailJobData } from '../queues/emailQueue.js';
 import { MailerService } from '../services/mailerService.js';
 import { RateLimiterService } from '../services/rateLimiterService.js';
 import { SearchService } from '../services/searchService.js';
+import { SlackService } from '../services/slackService.js';
 import { EmailStatus } from '@prisma/client';
-
 
 export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => {
   const { emailId } = job.data;
@@ -51,6 +51,15 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
         scheduledAt: quotaCheck.nextHour,
         status: EmailStatus.PENDING,
       },
+    });
+
+    // Attempt Slack notification asynchronously without blocking or failing the email job
+    SlackService.sendRateLimitNotification(
+      email.userId,
+      quotaCheck.nextHour,
+      env.MAX_EMAILS_PER_HOUR
+    ).catch((err) => {
+      console.error('[Slack Notification Error] Failed to send rate limit alert:', err?.message || err);
     });
 
     // Reschedule in BullMQ to delayed queue without dropping or failing job

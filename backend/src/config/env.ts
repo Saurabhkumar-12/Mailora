@@ -21,6 +21,9 @@ const envSchema = z.object({
   ELASTICSEARCH_API_KEY: z.string().min(1, 'ELASTICSEARCH_API_KEY cannot be empty').optional(),
   BULL_BOARD_USER: z.string().min(1, 'BULL_BOARD_USER is required'),
   BULL_BOARD_PASS: z.string().min(1, 'BULL_BOARD_PASS is required'),
+  SLACK_CLIENT_ID: z.string().optional(),
+  SLACK_CLIENT_SECRET: z.string().optional(),
+  SLACK_REDIRECT_URI: z.string().default('http://localhost:5000/api/slack/oauth/callback'),
 });
 
 
