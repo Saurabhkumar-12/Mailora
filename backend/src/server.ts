@@ -3,6 +3,8 @@ import { env } from './config/env.js';
 import { createEmailWorker } from './workers/emailWorker.js';
 
 import { EmailService } from './services/emailService.js';
+import { prisma } from './config/db.js';
+import { redisClient } from './config/redis.js';
 
 const app = createApp();
 
@@ -62,6 +64,21 @@ const handleShutdown = async (signal: string) => {
   } catch (workerErr: unknown) {
     const errMessage = workerErr instanceof Error ? workerErr.message : String(workerErr);
     console.error(`[Shutdown Warning] Error closing email worker: ${errMessage}`);
+  }
+
+  // 4. Disconnect Prisma & Redis
+  try {
+    await prisma.$disconnect();
+    console.log('Prisma client disconnected.');
+  } catch {
+    // Ignore errors during exit
+  }
+
+  try {
+    redisClient.disconnect();
+    console.log('Redis client disconnected.');
+  } catch {
+    // Ignore errors during exit
   }
 
   console.log('Shutdown sequence complete. Exiting.');
