@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 import { Loader2 } from 'lucide-react';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -22,19 +22,21 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none rounded-lg select-none';
+    'inline-flex items-center justify-center font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-offset-slate-950 disabled:opacity-50 disabled:pointer-events-none rounded-xl select-none';
+
+  const selectedVariant = variant === 'danger' ? 'destructive' : variant;
 
   const variants = {
     primary:
-      'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 focus:ring-indigo-500 shadow-xs border border-transparent',
+      'bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700 focus:ring-indigo-500 shadow-md shadow-indigo-600/20 border border-indigo-500/30',
     secondary:
-      'bg-slate-100 text-slate-900 hover:bg-slate-200 active:bg-slate-300 focus:ring-slate-400 border border-transparent',
+      'bg-slate-800/90 text-slate-200 hover:bg-slate-700 active:bg-slate-800 focus:ring-slate-500 border border-slate-700/80',
     outline:
-      'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100 focus:ring-indigo-500 shadow-2xs',
+      'bg-slate-900/60 text-slate-300 border border-slate-700/80 hover:bg-slate-800/80 hover:border-slate-600 hover:text-white focus:ring-indigo-500 shadow-xs',
     ghost:
-      'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200 focus:ring-slate-400',
+      'bg-transparent text-slate-400 hover:bg-slate-800/60 hover:text-white focus:ring-slate-500',
     destructive:
-      'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 focus:ring-rose-500 shadow-xs border border-transparent',
+      'bg-rose-600 text-white hover:bg-rose-500 active:bg-rose-700 focus:ring-rose-500 shadow-md shadow-rose-600/20 border border-rose-500/30',
   };
 
   const sizes = {
@@ -45,7 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={cn(baseStyles, variants[variant], sizes[size], className)}
+      className={cn(baseStyles, variants[selectedVariant], sizes[size], className)}
       disabled={disabled || isLoading}
       {...props}
     >

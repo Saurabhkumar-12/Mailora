@@ -10,7 +10,6 @@ export const AppLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
-  // Page title mapping based on route path
   const getPageTitle = (pathname: string): string => {
     switch (pathname) {
       case '/':
@@ -21,6 +20,8 @@ export const AppLayout: React.FC = () => {
         return 'Sent Emails';
       case '/compose':
         return 'Compose Email';
+      case '/contacts':
+        return 'Contacts';
       case '/integrations':
         return 'Integrations';
       case '/settings':
@@ -32,13 +33,13 @@ export const AppLayout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md animate-bounce">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 animate-bounce">
             <Mail className="w-6 h-6" />
           </div>
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-            <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+            <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
             <span>Loading Mailora...</span>
           </div>
         </div>
@@ -51,12 +52,12 @@ export const AppLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex font-sans antialiased relative">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64 relative z-10">
         <Header onMenuToggle={() => setSidebarOpen(true)} title={getPageTitle(location.pathname)} />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">

@@ -17,19 +17,34 @@ enum EmailStatus {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
+  id              String               @id @default(cuid())
+  email           String               @unique
   name            String?
   avatar          String?
-  googleId        String?          @unique
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  passwordHash    String?
+  googleId        String?              @unique
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   senders         Sender[]
   emails          Email[]
   slackConnection SlackConnection?
   sessions        Session[]
+  resetTokens     PasswordResetToken[]
 
   @@index([email])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Session {

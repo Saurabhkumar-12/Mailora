@@ -10,6 +10,12 @@ import {
 
 const router = Router();
 
+// Password Authentication Flow
+router.post('/register', authStartLimiter, AuthController.register);
+router.post('/login', authStartLimiter, AuthController.login);
+router.post('/forgot-password', authStartLimiter, AuthController.forgotPassword);
+router.post('/reset-password', authStartLimiter, AuthController.resetPassword);
+
 // Google OAuth Flow
 router.get('/google', authStartLimiter, AuthController.startGoogleOAuth);
 router.get('/google/callback', authCallbackLimiter, AuthController.handleGoogleCallback);

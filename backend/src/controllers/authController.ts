@@ -2,8 +2,113 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/authService.js';
 import { SessionService } from '../services/sessionService.js';
 import { env } from '../config/env.js';
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../schemas/authSchema.js';
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  signed: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  path: '/',
+};
 
 export class AuthController {
+  /**
+   * POST /api/auth/register
+   * Registers new user with Email/Password and sets signed HttpOnly session cookie.
+   */
+  static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input = registerSchema.parse(req.body);
+      const result = await AuthService.register(input);
+
+      res.cookie('mailora_sid', result.sid, COOKIE_OPTIONS);
+      res.status(201).json({
+        success: true,
+        message: 'Account created successfully',
+        data: {
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            avatar: result.user.avatar,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/login
+   * Authenticates user with Email/Password and sets signed HttpOnly session cookie.
+   */
+  static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input = loginSchema.parse(req.body);
+      const result = await AuthService.loginWithPassword(input);
+
+      res.cookie('mailora_sid', result.sid, COOKIE_OPTIONS);
+      res.status(200).json({
+        success: true,
+        message: 'Logged in successfully',
+        data: {
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            avatar: result.user.avatar,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/forgot-password
+   * Dispatches password reset token notification.
+   */
+  static async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+      const result = await AuthService.requestPasswordReset(email);
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/reset-password
+   * Resets user password using reset token.
+   */
+  static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token, password } = resetPasswordSchema.parse(req.body);
+      const result = await AuthService.resetPassword(token, password);
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * GET /api/auth/google
    * Redirects user to Google's OAuth 2.0 authorization server.
@@ -50,14 +155,7 @@ export class AuthController {
       const result = await AuthService.handleGoogleCallback(code, state);
 
       // Set signed HttpOnly session cookie
-      res.cookie('mailora_sid', result.sid, {
-        httpOnly: true,
-        signed: true,
-        secure: env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: '/',
-      });
+      res.cookie('mailora_sid', result.sid, COOKIE_OPTIONS);
 
       if (req.headers.accept?.includes('application/json')) {
         res.status(200).json({

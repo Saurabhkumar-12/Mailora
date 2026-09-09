@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
-import { Navigate, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Mail, Clock, AlertCircle, Eye, EyeOff, RefreshCw, Send, CheckCircle2 } from 'lucide-react';
+import { Mail, Clock, Send, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
-export const LoginPage: React.FC = () => {
-  const { isAuthenticated, isLoading, loginWithGoogle, loginWithPassword, error: authError } = useAuth();
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const rawOauthError = searchParams.get('error');
+export const RegisterPage: React.FC = () => {
+  const { isAuthenticated, isLoading, loginWithGoogle, register, error: authError } = useAuth();
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const isGoogleError = !!rawOauthError || (authError && authError.toLowerCase().includes('google'));
+  const displayError = formError || authError;
 
   if (isAuthenticated && !isLoading) {
     return <Navigate to="/" replace />;
@@ -26,31 +24,29 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (rawOauthError) {
-      navigate('/login', { replace: true });
-    }
-
-    if (!email.trim() || !password) {
-      setFormError('Please enter both email and password.');
+    if (!name.trim() || !email.trim() || !password) {
+      setFormError('Please fill out all required fields.');
       return;
     }
+    if (password.length < 8) {
+      setFormError('Password must be at least 8 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFormError('Passwords do not match.');
+      return;
+    }
+
     setFormError(null);
     setSubmitting(true);
-
     try {
-      await loginWithPassword(email.trim(), password);
+      await register(name.trim(), email.trim(), password);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Invalid email or password.';
+      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
       setFormError(msg);
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleRetryGoogle = () => {
-    navigate('/login', { replace: true });
-    loginWithGoogle();
   };
 
   return (
@@ -77,12 +73,11 @@ export const LoginPage: React.FC = () => {
 
             {/* Editorial Headline */}
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight tracking-tight mb-3">
-              Your emails.<br />
-              Your timing.<br />
-              <span className="text-indigo-400">Your workflow.</span>
+              Start sending<br />
+              <span className="text-indigo-400">smarter.</span>
             </h1>
             <p className="text-sm text-slate-400 leading-relaxed mb-8 max-w-md">
-              A faster, simpler way to run your outreach campaigns. Plan, schedule, and send with total control.
+              Create your account in seconds and unlock automated campaign scheduling, CSV list parsing, and delivery tracking.
             </p>
 
             {/* Value Props with Icons */}
@@ -92,8 +87,8 @@ export const LoginPage: React.FC = () => {
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-bold text-white block">Schedule emails</span>
-                  <span className="text-slate-400 text-xs">Send at the perfect time</span>
+                  <span className="font-bold text-white block">Schedule campaigns</span>
+                  <span className="text-slate-400 text-xs font-normal">Staggered delivery with sending quota safeguards</span>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -101,22 +96,22 @@ export const LoginPage: React.FC = () => {
                   <Send className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-bold text-white block">Track performance</span>
-                  <span className="text-slate-400 text-xs">See what's working in real-time</span>
+                  <span className="font-bold text-white block">Smart lead parsing</span>
+                  <span className="text-slate-400 text-xs font-normal">Auto deduplication & format validation</span>
                 </div>
               </div>
             </div>
 
-            {/* Floating Email Scheduled Notification Pill Card */}
+            {/* Floating Visual Card */}
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-2 shadow-xl animate-pulse">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
-                  <span className="text-xs font-bold text-white">Email scheduled</span>
+                  <span className="text-xs font-bold text-white">Lead batch ready</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">Tomorrow, 10:00 AM</span>
+                <span className="text-[10px] text-emerald-400 font-mono">100 Leads Parsed</span>
               </div>
             </div>
           </div>
@@ -124,78 +119,59 @@ export const LoginPage: React.FC = () => {
           {/* Testimonial Quote Footer */}
           <div className="relative z-10 pt-6 mt-6 border-t border-slate-800/80">
             <p className="text-xs text-slate-300 italic leading-relaxed">
-              "Mailora has completely changed how we do outbound. Simple, powerful, and reliable."
+              "Setting up outreach took less than 2 minutes. The batch scheduler is incredible."
             </p>
-            <span className="text-[11px] font-bold text-indigo-300 block mt-1.5">— Product Lead</span>
+            <span className="text-[11px] font-bold text-indigo-300 block mt-1.5">— Growth Lead</span>
           </div>
         </div>
 
-        {/* Right Side (~45%) — Dark Authentication Panel */}
+        {/* Right Side (~45%) — Dark Authentication Card */}
         <div className="lg:col-span-6 p-8 lg:p-12 bg-[#0d1117] flex flex-col justify-center text-white">
           <div className="max-w-md w-full mx-auto">
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-full bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-xs font-bold border border-indigo-500/30">
-                  ✓
-                </div>
-                <h2 className="text-2xl font-extrabold text-white tracking-tight">Welcome back</h2>
-              </div>
-              <p className="text-xs text-slate-400">Sign in to your Mailora account</p>
+            <div className="mb-6">
+              <h2 className="text-2xl font-extrabold text-white tracking-tight">Create an account</h2>
+              <p className="text-xs text-slate-500 mt-1">Get started with Mailora today</p>
             </div>
 
-            {/* Google OAuth Failure Alert */}
-            {isGoogleError && !formError && (
-              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-300 space-y-2">
-                  <span className="font-bold block">Google Sign In</span>
-                  <p>We couldn't complete Google sign-in. Please check your network connection and try again.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-1 text-xs font-bold"
-                    onClick={handleRetryGoogle}
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                    Try Again
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Form Error Alert */}
-            {formError && (
+            {displayError && (
               <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-rose-300">
-                  <span className="font-bold block">Sign In Failed</span>
-                  <span>{formError}</span>
+                  <span className="font-bold block">Registration Error</span>
+                  <span>{displayError}</span>
                 </div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               <Input
-                label="Email address"
+                label="Full Name"
+                type="text"
+                required
+                placeholder="Jane Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={submitting || isLoading}
+              />
+
+              <Input
+                label="Work Email"
                 type="email"
                 required
-                placeholder="you@example.com"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={submitting || isLoading}
               />
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-300">Password</label>
-                </div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/60 pr-10"
-                    placeholder="Enter your password"
+                    placeholder="At least 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={submitting || isLoading}
@@ -210,21 +186,17 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between text-xs pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-slate-400">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                  />
-                  <span>Remember me</span>
-                </label>
-
-                <Link to="/forgot-password" className="font-semibold text-indigo-400 hover:text-indigo-300">
-                  Forgot password?
-                </Link>
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Confirm Password</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/60"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={submitting || isLoading}
+                />
               </div>
 
               <Button
@@ -233,13 +205,12 @@ export const LoginPage: React.FC = () => {
                 size="lg"
                 className="w-full mt-2 font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md rounded-xl"
                 isLoading={submitting}
-                disabled={submitting || isLoading}
               >
-                Sign In
+                Create Account
               </Button>
             </form>
 
-            <div className="my-6 flex items-center gap-3">
+            <div className="my-5 flex items-center gap-3">
               <div className="h-px bg-slate-800 flex-1" />
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">OR</span>
               <div className="h-px bg-slate-800 flex-1" />
@@ -252,7 +223,6 @@ export const LoginPage: React.FC = () => {
               className="w-full flex items-center justify-center gap-3 font-semibold text-sm rounded-xl"
               onClick={loginWithGoogle}
               isLoading={isLoading}
-              disabled={submitting || isLoading}
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path
@@ -275,10 +245,10 @@ export const LoginPage: React.FC = () => {
               <span>Continue with Google</span>
             </Button>
 
-            <p className="mt-8 text-center text-xs text-slate-500">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-semibold text-indigo-400 hover:text-indigo-300">
-                Create one
+            <p className="mt-6 text-center text-xs text-slate-500">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-indigo-400 hover:text-indigo-300">
+                Sign in
               </Link>
             </p>
           </div>

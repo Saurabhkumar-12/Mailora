@@ -8,6 +8,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   error: string | null;
   loginWithGoogle: () => Promise<void>;
+  loginWithPassword: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refetchUser: () => Promise<void>;
 }
@@ -53,6 +55,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithPassword = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await api.auth.login({ email, password });
+      if (res.data?.user) {
+        setUser(res.data.user);
+      } else {
+        await fetchUser();
+      }
+    } catch (err: unknown) {
+      setIsLoading(false);
+      const msg = err instanceof Error ? err.message : 'Sign in failed. Please check your credentials.';
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerUser = async (name: string, email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await api.auth.register({ name, email, password });
+      if (res.data?.user) {
+        setUser(res.data.user);
+      } else {
+        await fetchUser();
+      }
+    } catch (err: unknown) {
+      setIsLoading(false);
+      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -74,6 +116,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         error,
         loginWithGoogle,
+        loginWithPassword,
+        register: registerUser,
         logout,
         refetchUser: fetchUser,
       }}

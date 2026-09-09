@@ -60,6 +60,30 @@ async function fetchApi<T>(
 export const api = {
   // Authentication & Session API
   auth: {
+    register: async (payload: { name: string; email: string; password: string }): Promise<AuthMeResponse> => {
+      return fetchApi<AuthMeResponse>('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    login: async (payload: { email: string; password: string }): Promise<AuthMeResponse> => {
+      return fetchApi<AuthMeResponse>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    forgotPassword: async (payload: { email: string }): Promise<ApiResponse<void>> => {
+      return fetchApi<ApiResponse<void>>('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    resetPassword: async (payload: { token: string; password: string }): Promise<ApiResponse<void>> => {
+      return fetchApi<ApiResponse<void>>('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
     getGoogleAuthUrl: async (): Promise<string> => {
       const res = await fetchApi<{ success: boolean; url: string }>('/api/auth/google?json=true');
       return res.url;

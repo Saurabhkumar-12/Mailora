@@ -15,17 +15,17 @@ export const Badge: React.FC<BadgeProps> = ({
   className,
   size = 'md',
 }) => {
-  const baseStyles = 'inline-flex items-center font-medium rounded-md border tracking-tight';
+  const baseStyles = 'inline-flex items-center font-medium rounded-lg border tracking-tight';
 
   const variants = {
-    default: 'bg-slate-100 text-slate-700 border-slate-200',
-    neutral: 'bg-slate-100 text-slate-700 border-slate-200',
-    pending: 'bg-amber-50 text-amber-800 border-amber-200/80',
-    processing: 'bg-blue-50 text-blue-800 border-blue-200/80',
-    sent: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
-    success: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
-    failed: 'bg-rose-50 text-rose-800 border-rose-200/80',
-    warning: 'bg-amber-50 text-amber-800 border-amber-200/80',
+    default: 'bg-slate-800/80 text-slate-300 border-slate-700/80',
+    neutral: 'bg-slate-800/80 text-slate-300 border-slate-700/80',
+    pending: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
+    processing: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+    sent: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+    failed: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
+    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
   };
 
   const sizes = {
@@ -38,10 +38,10 @@ export const Badge: React.FC<BadgeProps> = ({
       <span
         className={cn(
           'w-1.5 h-1.5 rounded-full shrink-0',
-          variant === 'sent' || variant === 'success' ? 'bg-emerald-500' : '',
-          variant === 'pending' || variant === 'warning' ? 'bg-amber-500' : '',
-          variant === 'processing' ? 'bg-blue-500 animate-pulse' : '',
-          variant === 'failed' ? 'bg-rose-500' : '',
+          variant === 'sent' || variant === 'success' ? 'bg-emerald-400 shadow-sm shadow-emerald-500/50' : '',
+          variant === 'pending' || variant === 'warning' ? 'bg-indigo-400' : '',
+          variant === 'processing' ? 'bg-blue-400 animate-pulse' : '',
+          variant === 'failed' ? 'bg-rose-400' : '',
           variant === 'neutral' || variant === 'default' ? 'bg-slate-400' : ''
         )}
       />
@@ -50,9 +50,6 @@ export const Badge: React.FC<BadgeProps> = ({
   );
 };
 
-/**
- * Helper component specifically for rendering EmailStatus
- */
 export const StatusBadge: React.FC<{ status: EmailStatus; className?: string }> = ({
   status,
   className,

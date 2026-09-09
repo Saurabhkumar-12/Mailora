@@ -107,7 +107,8 @@ export interface ApiResponse<T> {
 
 export interface AuthMeResponse {
   success: boolean;
-  authenticated: boolean;
+  authenticated?: boolean;
   user?: User;
+  data?: { user: User };
   error?: string;
 }
