@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 import type { EmailRecord } from '../types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -12,6 +13,7 @@ import { formatDate } from '../lib/utils';
 import { Clock, Search, RefreshCw, XCircle } from 'lucide-react';
 
 export const ScheduledEmailsPage: React.FC = () => {
+  const { showToast } = useToast();
   const [emails, setEmails] = useState<EmailRecord[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -64,10 +66,14 @@ export const ScheduledEmailsPage: React.FC = () => {
     if (!confirm('Are you sure you want to cancel this scheduled email?')) return;
     setCancellingId(id);
     try {
-      await api.emails.cancel(id);
-      await loadEmails(page);
+      const res = await api.emails.cancel(id);
+      if (res.success) {
+        showToast('Email scheduled job cancelled successfully', 'success', 'Cancelled');
+        await loadEmails(page);
+      }
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Could not cancel email.');
+      const msg = err instanceof Error ? err.message : 'Could not cancel email.';
+      showToast(msg, 'error', 'Cancellation Error');
     } finally {
       setCancellingId(null);
     }

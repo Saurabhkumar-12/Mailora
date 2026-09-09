@@ -45,6 +45,27 @@ export interface EmailRecord {
 }
 
 /**
+ * Single Email Schedule Payload matching backend scheduleEmailSchema
+ */
+export interface ScheduleEmailPayload {
+  recipient: string;
+  subject: string;
+  body: string;
+  scheduledAt: string; // ISO-8601 string
+}
+
+/**
+ * Batch Email Schedule Payload matching backend scheduleBatchEmailSchema
+ */
+export interface ScheduleBatchPayload {
+  recipients: string[];
+  subject: string;
+  body: string;
+  startTime?: string; // ISO-8601 string
+  delayBetweenEmailsMs?: number;
+}
+
+/**
  * Pagination Metadata from backend
  */
 export interface PaginationMeta {

@@ -4,6 +4,8 @@ import type {
   PaginatedListResponse,
   EmailRecord,
   SlackStatus,
+  ScheduleEmailPayload,
+  ScheduleBatchPayload,
 } from '../types';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -80,6 +82,18 @@ export const api = {
     },
     getById: async (id: string): Promise<ApiResponse<EmailRecord>> => {
       return fetchApi<ApiResponse<EmailRecord>>(`/api/emails/${id}`);
+    },
+    schedule: async (payload: ScheduleEmailPayload): Promise<ApiResponse<EmailRecord>> => {
+      return fetchApi<ApiResponse<EmailRecord>>('/api/emails/schedule', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    scheduleBatch: async (payload: ScheduleBatchPayload): Promise<ApiResponse<{ totalRequested: number; totalQueued: number; emails: EmailRecord[] }>> => {
+      return fetchApi<ApiResponse<{ totalRequested: number; totalQueued: number; emails: EmailRecord[] }>>('/api/emails/schedule-batch', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
     },
     cancel: async (id: string): Promise<ApiResponse<EmailRecord>> => {
       return fetchApi<ApiResponse<EmailRecord>>(`/api/emails/${id}/cancel`, { method: 'POST' });
