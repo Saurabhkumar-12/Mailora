@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Email" ADD COLUMN IF NOT EXISTS "messageId" TEXT,
+ADD COLUMN IF NOT EXISTS "previewUrl" TEXT;

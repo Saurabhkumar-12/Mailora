@@ -36,4 +36,10 @@ router.get('/health', async (_req: Request, res: Response) => {
   });
 });
 
+router.get('/smtp/verify', async (_req: Request, res: Response) => {
+  const { MailerService } = await import('../services/mailerService.js');
+  const result = await MailerService.verifyConnection();
+  res.status(result.ok ? 200 : 503).json(result);
+});
+
 export default router;

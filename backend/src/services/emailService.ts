@@ -44,6 +44,9 @@ export class EmailService {
         userId,
         senderId: input.senderId || null,
       },
+      include: {
+        sender: { select: { id: true, email: true, name: true } },
+      },
     });
 
     // 2. Queue delayed job with deterministic jobId = email.id for idempotency
@@ -64,6 +67,9 @@ export class EmailService {
       const updated = await prisma.email.update({
         where: { id: email.id },
         data: { jobId: email.id },
+        include: {
+          sender: { select: { id: true, email: true, name: true } },
+        },
       });
 
       // 4. Asynchronously index in Elasticsearch (idempotent; fails gracefully)
@@ -109,23 +115,23 @@ export class EmailService {
 
     const results = [];
 
-    for (let i = 0; i < uniqueRecipients.length; i++) {
-      const recipient = uniqueRecipients[i];
-      const scheduledTime = new Date(baseTime + i * delayStep);
+    for (let index = 0; index < uniqueRecipients.length; index++) {
+      const recipient = uniqueRecipients[index];
+      const scheduledTimeMs = baseTime + index * delayStep;
+      const scheduledAtIso = new Date(scheduledTimeMs).toISOString();
 
-      const scheduled = await this.scheduleEmail(
+      const result = await this.scheduleEmail(
         {
           recipient,
           subject: input.subject,
           body: input.body,
-          scheduledAt: scheduledTime.toISOString(),
+          scheduledAt: scheduledAtIso,
           senderId: input.senderId,
-          userId,
         },
         userId
       );
 
-      results.push(scheduled);
+      results.push(result.email);
     }
 
     return {
@@ -136,14 +142,26 @@ export class EmailService {
   }
 
   /**
-   * Fetch scheduled/pending emails.
+   * Fetch scheduled emails with pagination & search.
    */
-  static async getScheduledEmails(userId?: string, page = 1, limit = 20) {
+  static async getScheduledEmails(
+    userId?: string,
+    page = 1,
+    limit = 20,
+    search?: string
+  ) {
     const skip = (page - 1) * limit;
-    const whereClause = {
+    const whereClause: any = {
       status: { in: [EmailStatus.PENDING, EmailStatus.PROCESSING] },
       ...(userId ? { userId } : {}),
     };
+
+    if (search) {
+      whereClause.OR = [
+        { recipient: { contains: search, mode: 'insensitive' } },
+        { subject: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const [total, emails] = await Promise.all([
       prisma.email.count({ where: whereClause }),
@@ -368,4 +386,3 @@ export class EmailService {
     return { checked: 0, recovered: 0, success: false };
   }
 }
-

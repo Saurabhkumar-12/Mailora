@@ -84,6 +84,8 @@ model Email {
   sentAt       DateTime?
   failedAt     DateTime?
   errorMessage String?     @db.Text
+  messageId    String?
+  previewUrl   String?
   jobId        String?     @unique
   userId       String
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)

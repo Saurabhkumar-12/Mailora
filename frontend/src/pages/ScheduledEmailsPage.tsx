@@ -128,7 +128,7 @@ export const ScheduledEmailsPage: React.FC = () => {
                     statusFilter === f ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'hover:text-white'
                   }`}
                 >
-                  {f === 'ALL' ? 'All Pending' : f.charAt(0) + f.slice(1).toLowerCase()}
+                  {f === 'ALL' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>

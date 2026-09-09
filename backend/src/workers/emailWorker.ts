@@ -87,7 +87,7 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
   });
 
   try {
-    // 5. Send email via Nodemailer + Ethereal SMTP
+    // 5. Send email via Nodemailer
     const result = await MailerService.sendMail({
       to: email.recipient,
       subject: email.subject,
@@ -100,6 +100,8 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
       data: {
         status: EmailStatus.SENT,
         sentAt: new Date(),
+        messageId: result.messageId,
+        previewUrl: result.previewUrl,
         errorMessage: null,
       },
     });
@@ -107,7 +109,11 @@ export const processEmailJob = async (job: Job<EmailJobData>): Promise<void> => 
     // Idempotent Search Indexing (fails gracefully)
     SearchService.indexEmail(updated).catch(() => {});
 
-    console.log(`[Worker] Successfully sent email ${emailId}. Preview URL: ${result.previewUrl || 'N/A'}`);
+    if (result.previewUrl) {
+      console.log(`[Worker] Successfully sent email ${emailId}. Ethereal Preview URL: ${result.previewUrl}`);
+    } else {
+      console.log(`[Worker] Successfully sent email ${emailId} via SMTP. Message ID: ${result.messageId}`);
+    }
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : 'Unknown mailer error';
     console.error(`[Worker Error] Failed to send email ${emailId}: ${errMessage}`);
