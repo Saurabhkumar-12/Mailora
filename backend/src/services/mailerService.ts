@@ -34,8 +34,15 @@ export class MailerService {
       return this.transporter;
     }
 
-    if (!env.SMTP_USER || !env.SMTP_PASS) {
-      throw new Error('Ethereal SMTP credentials are not configured');
+    let user = env.SMTP_USER;
+    let pass = env.SMTP_PASS;
+
+    if (!user || !pass) {
+      console.log('ℹ️ No SMTP_USER/SMTP_PASS found. Creating dynamic Ethereal test account...');
+      const testAccount = await nodemailer.createTestAccount();
+      user = testAccount.user;
+      pass = testAccount.pass;
+      console.log(`✅ Ethereal test account provisioned: ${user}`);
     }
 
     this.transporter = nodemailer.createTransport({
@@ -43,8 +50,8 @@ export class MailerService {
       port: env.SMTP_PORT,
       secure: env.SMTP_PORT === 465,
       auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
+        user,
+        pass,
       },
     });
 

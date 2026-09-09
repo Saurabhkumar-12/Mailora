@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { StatusBadge } from './Badge';
 import { Button } from './Button';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './Dialog';
-import { X, Mail, Calendar, Send, AlertCircle, StopCircle, User, CheckCircle2 } from 'lucide-react';
+import { X, Mail, Calendar, Send, AlertCircle, StopCircle, User, CheckCircle2, ExternalLink } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 
 interface EmailDetailDrawerProps {
@@ -177,6 +177,35 @@ export const EmailDetailDrawer: React.FC<EmailDetailDrawerProps> = ({ email, onC
                 </div>
               </div>
 
+              {/* Ethereal Sandbox Transport Details */}
+              <div className="p-3.5 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400 font-semibold">Email Transport</span>
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-950 text-indigo-300 text-[10px] font-bold border border-indigo-800/80">
+                    Ethereal Fake SMTP
+                  </span>
+                </div>
+                {email.messageId && (
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Message ID</span>
+                    <span className="text-xs font-mono text-slate-300 truncate block mt-0.5">{email.messageId}</span>
+                  </div>
+                )}
+                {email.previewUrl && (
+                  <div className="pt-1 border-t border-slate-800/80">
+                    <a
+                      href={email.previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>View Ethereal Preview</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+
               {/* Error Alert if Failed */}
               {email.status === EmailStatus.FAILED && (
                 <div className="p-4 bg-rose-950/30 border border-rose-900/50 rounded-xl flex items-start gap-2.5">
@@ -186,7 +215,7 @@ export const EmailDetailDrawer: React.FC<EmailDetailDrawerProps> = ({ email, onC
                     <span>
                       {email.errorMessage && email.errorMessage.toLowerCase().includes('cancelled')
                         ? 'Campaign stopped by user before delivery.'
-                        : 'Delivery failed. Outbound queue could not process dispatch.'}
+                        : (email.errorMessage || 'Delivery failed. Outbound queue could not process dispatch.')}
                     </span>
                   </div>
                 </div>

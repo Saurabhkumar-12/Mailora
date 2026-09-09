@@ -11,7 +11,7 @@ import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
 import { EmailDetailDrawer } from '../components/ui/EmailDetailDrawer';
 import { formatDate } from '../lib/utils';
-import { Send, Search, RefreshCw, Eye } from 'lucide-react';
+import { Send, Search, RefreshCw, Eye, ExternalLink } from 'lucide-react';
 
 export const SentEmailsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -64,7 +64,11 @@ export const SentEmailsPage: React.FC = () => {
 
   useEffect(() => {
     loadEmails(1);
-  }, [searchQuery, statusFilter]);
+    const interval = setInterval(() => {
+      loadEmails(page);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [searchQuery, statusFilter, page]);
 
   return (
     <div className="space-y-6">
@@ -162,18 +166,28 @@ export const SentEmailsPage: React.FC = () => {
                         <StatusBadge status={email.status} />
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedEmail(email);
-                          }}
-                          className="text-slate-500 hover:text-white hover:bg-slate-800/40"
-                        >
-                          <Eye className="w-4 h-4 mr-1 text-slate-400" />
-                          View Details
-                        </Button>
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          {email.previewUrl && (
+                            <a
+                              href={email.previewUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 border border-indigo-800/80 text-xs font-semibold transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Preview</span>
+                            </a>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedEmail(email)}
+                            className="text-slate-500 hover:text-white hover:bg-slate-800/40"
+                          >
+                            <Eye className="w-4 h-4 mr-1 text-slate-400" />
+                            View Details
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

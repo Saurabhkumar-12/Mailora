@@ -35,6 +35,8 @@ export interface EmailRecord {
   jobId: string | null;
   userId: string;
   senderId: string | null;
+  messageId?: string | null;
+  previewUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   sender?: {

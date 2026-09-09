@@ -139,7 +139,7 @@ export class SearchService {
 
     const from = (page - 1) * limit;
 
-    const mustClauses: any[] = [];
+    const mustClauses: Record<string, unknown>[] = [];
     if (queryText && queryText.trim().length > 0) {
       mustClauses.push({
         multi_match: {

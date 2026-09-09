@@ -71,7 +71,11 @@ export const ScheduledEmailsPage: React.FC = () => {
 
   useEffect(() => {
     loadEmails(1);
-  }, [searchQuery, statusFilter]);
+    const interval = setInterval(() => {
+      loadEmails(page);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [searchQuery, statusFilter, page]);
 
   const handleCancelConfirm = async () => {
     if (!cancelTargetEmail) return;

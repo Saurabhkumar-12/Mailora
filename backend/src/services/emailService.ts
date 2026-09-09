@@ -1,7 +1,7 @@
 import { prisma } from '../config/db.js';
 import { emailQueue } from '../queues/emailQueue.js';
 import { ScheduleEmailInput, ScheduleBatchEmailInput } from '../schemas/emailSchema.js';
-import { EmailStatus } from '@prisma/client';
+import { EmailStatus, Prisma } from '@prisma/client';
 import { SearchService } from './searchService.js';
 
 
@@ -151,7 +151,7 @@ export class EmailService {
     search?: string
   ) {
     const skip = (page - 1) * limit;
-    const whereClause: any = {
+    const whereClause: Prisma.EmailWhereInput = {
       status: { in: [EmailStatus.PENDING, EmailStatus.PROCESSING] },
       ...(userId ? { userId } : {}),
     };

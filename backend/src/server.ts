@@ -10,9 +10,9 @@ const emailWorker = createEmailWorker();
 
 let reconciliationPromise: Promise<{ checked: number; recovered: number; success: boolean }> | null = null;
 
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, '0.0.0.0', () => {
   console.log(`🚀 Mailora Backend running on port ${env.PORT} in ${env.NODE_ENV} mode`);
-  console.log(`📡 Health check available at http://localhost:${env.PORT}/api/health`);
+  console.log(`📡 Health check available at http://0.0.0.0:${env.PORT}/api/health`);
   console.log(`⚡ BullMQ Email Worker active`);
 
   // Run startup reconciliation asynchronously in background without blocking API availability
