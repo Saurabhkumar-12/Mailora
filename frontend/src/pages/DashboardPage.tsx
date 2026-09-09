@@ -36,8 +36,10 @@ export const DashboardPage: React.FC = () => {
   const firstName = user?.name ? user.name.split(' ')[0] : '';
   const greetingText = `${getGreeting()}${firstName ? `, ${firstName}` : ''} 👋`;
 
-  const loadDashboardData = async () => {
-    setIsLoading(true);
+  const loadDashboardData = async (isBackground = false) => {
+    if (!isBackground) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const [scheduledRes, sentRes, slackRes] = await Promise.all([
@@ -63,12 +65,18 @@ export const DashboardPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : 'Unable to load dashboard data.';
       setError(msg);
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadDashboardData();
+    const interval = setInterval(() => {
+      loadDashboardData(true);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const isNewUser = (scheduledCount ?? 0) === 0 && (sentCount ?? 0) === 0;

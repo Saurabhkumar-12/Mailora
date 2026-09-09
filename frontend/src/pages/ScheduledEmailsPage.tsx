@@ -33,8 +33,10 @@ export const ScheduledEmailsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadEmails = async (currentPage = page) => {
-    setIsLoading(true);
+  const loadEmails = async (currentPage = page, isBackground = false) => {
+    if (!isBackground) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       if (searchQuery.trim()) {
@@ -65,17 +67,27 @@ export const ScheduledEmailsPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : 'Failed to fetch scheduled emails.';
       setError(msg);
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadEmails(1);
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
+    // Dynamic fast polling (2s) when jobs are actively pending or processing, otherwise 6s
+    const hasActiveJobs = emails.some((e) => e.status === 'PENDING' || e.status === 'PROCESSING');
+    const pollIntervalMs = hasActiveJobs ? 2000 : 6000;
+
     const interval = setInterval(() => {
-      loadEmails(page);
-    }, 10000);
+      loadEmails(page, true);
+    }, pollIntervalMs);
+
     return () => clearInterval(interval);
-  }, [searchQuery, statusFilter, page]);
+  }, [page, emails]);
 
   const handleCancelConfirm = async () => {
     if (!cancelTargetEmail) return;

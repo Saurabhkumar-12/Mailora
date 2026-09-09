@@ -26,8 +26,10 @@ export const SentEmailsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadEmails = async (currentPage = page) => {
-    setIsLoading(true);
+  const loadEmails = async (currentPage = page, isBackground = false) => {
+    if (!isBackground) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       if (searchQuery.trim()) {
@@ -58,17 +60,22 @@ export const SentEmailsPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : 'Failed to fetch sent email history.';
       setError(msg);
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     loadEmails(1);
+  }, [searchQuery, statusFilter]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      loadEmails(page);
-    }, 10000);
+      loadEmails(page, true);
+    }, 3000);
     return () => clearInterval(interval);
-  }, [searchQuery, statusFilter, page]);
+  }, [page]);
 
   return (
     <div className="space-y-6">

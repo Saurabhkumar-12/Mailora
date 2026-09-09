@@ -26,7 +26,11 @@ export const createApp = (): Application => {
   ];
 
   // Security headers & CORS with credentials support
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
   app.use(
     cors({
       origin: (origin, callback) => {
@@ -38,6 +42,7 @@ export const createApp = (): Application => {
         }
       },
       credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id', 'Accept'],
     })
   );
 

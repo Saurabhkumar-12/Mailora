@@ -27,6 +27,17 @@ async function fetchApi<T>(
     defaultHeaders['Content-Type'] = 'application/json';
   }
 
+  // Support token-based session fallback for cross-site third-party cookie blocked environments
+  try {
+    const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('mailora_session_token') : null;
+    if (sessionToken) {
+      defaultHeaders['Authorization'] = `Bearer ${sessionToken}`;
+      defaultHeaders['x-session-id'] = sessionToken;
+    }
+  } catch {
+    // Ignore storage errors in restricted iframe contexts
+  }
+
   const config: RequestInit = {
     ...options,
     headers: {

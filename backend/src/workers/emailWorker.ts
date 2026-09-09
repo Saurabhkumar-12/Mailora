@@ -140,6 +140,7 @@ export const createEmailWorker = (): Worker<EmailJobData> => {
   const workerOptions: WorkerOptions = {
     connection: new Redis(getCleanRedisUrl(), getRedisConnectionOptions()),
     concurrency: env.WORKER_CONCURRENCY,
+    drainDelay: 500,
   };
 
   const worker = new Worker<EmailJobData>(EMAIL_QUEUE_NAME, processEmailJob, workerOptions);

@@ -39,6 +39,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Check if redirected with session_token from Google OAuth callback
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const sessionToken = searchParams.get('session_token');
+      if (sessionToken) {
+        localStorage.setItem('mailora_session_token', sessionToken);
+        // Remove query parameter cleanly from browser address bar without reloading
+        searchParams.delete('session_token');
+        const newSearch = searchParams.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+
     fetchUser();
   }, []);
 
@@ -60,6 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       const res = await api.auth.login({ email, password });
+      if (res.data?.sessionToken) {
+        localStorage.setItem('mailora_session_token', res.data.sessionToken);
+      }
       if (res.data?.user) {
         setUser(res.data.user);
       } else {
@@ -80,6 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       const res = await api.auth.register({ name, email, password });
+      if (res.data?.sessionToken) {
+        localStorage.setItem('mailora_session_token', res.data.sessionToken);
+      }
       if (res.data?.user) {
         setUser(res.data.user);
       } else {
@@ -99,11 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       await api.auth.logout();
+      localStorage.removeItem('mailora_session_token');
       setUser(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Logout failed. Please try again.';
       setError(msg);
     } finally {
+      localStorage.removeItem('mailora_session_token');
       setIsLoading(false);
     }
   };

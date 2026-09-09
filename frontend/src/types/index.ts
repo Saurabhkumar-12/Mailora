@@ -111,6 +111,6 @@ export interface AuthMeResponse {
   success: boolean;
   authenticated?: boolean;
   user?: User;
-  data?: { user: User };
+  data?: { user: User; sessionToken?: string };
   error?: string;
 }

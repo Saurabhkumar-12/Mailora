@@ -12,11 +12,18 @@ declare global {
 }
 
 /**
- * Extracts session ID strictly from signed HttpOnly cookie.
+ * Extracts session ID from signed HttpOnly cookie, Authorization Bearer header, or x-session-id.
  */
 const getSessionId = (req: Request): string | null => {
   if (req.signedCookies && typeof req.signedCookies.mailora_sid === 'string') {
     return req.signedCookies.mailora_sid;
+  }
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7).trim();
+  }
+  if (typeof req.headers['x-session-id'] === 'string') {
+    return req.headers['x-session-id'].trim();
   }
   return null;
 };

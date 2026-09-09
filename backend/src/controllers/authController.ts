@@ -16,6 +16,7 @@ export const COOKIE_OPTIONS = {
   signed: true,
   secure: isProduction,
   sameSite: isProduction ? ('none' as const) : ('lax' as const),
+  partitioned: isProduction,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
 };
@@ -46,6 +47,7 @@ export class AuthController {
         success: true,
         message: 'Account created successfully',
         data: {
+          sessionToken: result.sid,
           user: {
             id: result.user.id,
             email: result.user.email,
@@ -73,6 +75,7 @@ export class AuthController {
         success: true,
         message: 'Logged in successfully',
         data: {
+          sessionToken: result.sid,
           user: {
             id: result.user.id,
             email: result.user.email,
@@ -175,6 +178,7 @@ export class AuthController {
           success: true,
           message: 'Authenticated successfully',
           data: {
+            sessionToken: result.sid,
             user: {
               id: result.user.id,
               email: result.user.email,
@@ -186,7 +190,7 @@ export class AuthController {
         return;
       }
 
-      res.redirect(getEffectiveFrontendUrl());
+      res.redirect(`${getEffectiveFrontendUrl()}/?session_token=${encodeURIComponent(result.sid)}`);
     } catch (error) {
       if (req.headers.accept?.includes('application/json')) {
         next(error);
@@ -234,7 +238,12 @@ export class AuthController {
    */
   static async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const sid = req.signedCookies?.mailora_sid;
+      const sid =
+        req.signedCookies?.mailora_sid ||
+        (req.headers.authorization?.startsWith('Bearer ')
+          ? req.headers.authorization.substring(7).trim()
+          : null) ||
+        (typeof req.headers['x-session-id'] === 'string' ? req.headers['x-session-id'].trim() : null);
 
       if (sid) {
         await SessionService.destroySession(sid);
