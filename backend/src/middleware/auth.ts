@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { User } from '@prisma/client';
 import { SessionService } from '../services/sessionService.js';
+import { env } from '../config/env.js';
 
 declare global {
   namespace Express {
@@ -37,7 +38,12 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     const user = await SessionService.getSessionUser(sid);
     if (!user) {
-      res.clearCookie('mailora_sid', { path: '/' });
+      const isProduction = env.NODE_ENV === 'production';
+      res.clearCookie('mailora_sid', {
+        path: '/',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+      });
       res.status(401).json({
         success: false,
         error: 'Invalid or expired session. Please sign in again.',

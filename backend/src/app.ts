@@ -14,11 +14,29 @@ import { serverAdapter } from './config/bullBoard.js';
 export const createApp = (): Application => {
   const app = express();
 
+  // Trust proxy for secure cookies and accurate client IP behind Render/reverse proxy
+  app.set('trust proxy', 1);
+
+  // Normalize allowed CORS origins
+  const allowedOrigins = [
+    env.CLIENT_URL.replace(/\/$/, ''),
+    env.FRONTEND_URL.replace(/\/$/, ''),
+    'https://mailora-mail.vercel.app',
+    'http://localhost:5173',
+  ];
+
   // Security headers & CORS with credentials support
   app.use(helmet());
   app.use(
     cors({
-      origin: [env.CLIENT_URL, env.FRONTEND_URL],
+      origin: (origin, callback) => {
+        // Allow requests with no origin (curl, mobile apps, server-to-server)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       credentials: true,
     })
   );

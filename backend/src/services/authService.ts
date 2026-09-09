@@ -34,6 +34,17 @@ export function verifyPassword(password: string, combined: string): boolean {
   return crypto.timingSafeEqual(keyBuffer, derivedKey);
 }
 
+export const getEffectiveGoogleRedirectUri = (): string => {
+  const uri = env.GOOGLE_REDIRECT_URI?.trim();
+  if (uri && uri !== 'http://localhost:5000/api/auth/google/callback') {
+    return uri;
+  }
+  if (env.NODE_ENV === 'production') {
+    return 'https://mailora-backend-fsy2.onrender.com/api/auth/google/callback';
+  }
+  return uri || 'http://localhost:5000/api/auth/google/callback';
+};
+
 export class AuthService {
   /**
    * Registers a new user with Email and Password.
@@ -212,7 +223,9 @@ export class AuthService {
    */
   static async buildGoogleAuthorizationUrl(): Promise<{ url: string; state: string }> {
     if (!env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_ID === 'placeholder_google_client_id.apps.googleusercontent.com') {
-      throw new Error('GOOGLE_CLIENT_ID is not configured in backend environment.');
+      const err = new Error('GOOGLE_CLIENT_ID is not configured in backend environment.');
+      (err as { statusCode?: number }).statusCode = 400;
+      throw err;
     }
 
     const state = crypto.randomBytes(24).toString('hex');
@@ -221,11 +234,12 @@ export class AuthService {
     // Store state in Redis for 10 minutes (CSRF protection)
     await redisClient.set(stateKey, 'pending', 'EX', 600);
 
+    const redirectUri = getEffectiveGoogleRedirectUri();
     const scopes = 'openid email profile';
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: env.GOOGLE_CLIENT_ID,
-      redirect_uri: env.GOOGLE_REDIRECT_URI,
+      redirect_uri: redirectUri,
       scope: scopes,
       state,
       access_type: 'offline',
@@ -264,11 +278,12 @@ export class AuthService {
     }
 
     // 1. Server-side authorization code exchange using Google's official token endpoint
+    const redirectUri = getEffectiveGoogleRedirectUri();
     const tokenParams = new URLSearchParams({
       code,
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: env.GOOGLE_REDIRECT_URI,
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code',
     });
 

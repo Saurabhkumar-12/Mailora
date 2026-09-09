@@ -9,13 +9,26 @@ import {
   resetPasswordSchema,
 } from '../schemas/authSchema.js';
 
-const COOKIE_OPTIONS = {
+const isProduction = env.NODE_ENV === 'production';
+
+export const COOKIE_OPTIONS = {
   httpOnly: true,
   signed: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: isProduction,
+  sameSite: isProduction ? ('none' as const) : ('lax' as const),
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
+};
+
+export const getEffectiveFrontendUrl = (): string => {
+  const url = env.FRONTEND_URL?.trim();
+  if (url && url !== 'http://localhost:5173') {
+    return url.replace(/\/$/, '');
+  }
+  if (env.NODE_ENV === 'production') {
+    return 'https://mailora-mail.vercel.app';
+  }
+  return (url || 'http://localhost:5173').replace(/\/$/, '');
 };
 
 export class AuthController {
@@ -140,7 +153,7 @@ export class AuthController {
       const { code, state, error: oauthError } = req.query;
 
       if (oauthError) {
-        res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(String(oauthError))}`);
+        res.redirect(`${getEffectiveFrontendUrl()}/login?error=${encodeURIComponent(String(oauthError))}`);
         return;
       }
 
@@ -173,14 +186,14 @@ export class AuthController {
         return;
       }
 
-      res.redirect(env.FRONTEND_URL);
+      res.redirect(getEffectiveFrontendUrl());
     } catch (error) {
       if (req.headers.accept?.includes('application/json')) {
         next(error);
         return;
       }
       const errMessage = error instanceof Error ? error.message : 'Google authentication failed';
-      res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(errMessage)}`);
+      res.redirect(`${getEffectiveFrontendUrl()}/login?error=${encodeURIComponent(errMessage)}`);
     }
   }
 
@@ -227,7 +240,11 @@ export class AuthController {
         await SessionService.destroySession(sid);
       }
 
-      res.clearCookie('mailora_sid', { path: '/' });
+      res.clearCookie('mailora_sid', {
+        path: '/',
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+      });
       res.status(200).json({
         success: true,
         message: 'Logged out successfully',
