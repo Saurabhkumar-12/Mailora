@@ -5,6 +5,8 @@ import { env } from './config/env.js';
 import healthRoutes from './routes/health.js';
 import emailRoutes from './routes/email.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { bullBoardAuth } from './middleware/bullBoardAuth.js';
+import { serverAdapter } from './config/bullBoard.js';
 
 export const createApp = (): Application => {
   const app = express();
@@ -22,9 +24,20 @@ export const createApp = (): Application => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Routes
+  // API Routes
   app.use('/api', healthRoutes);
   app.use('/api/emails', emailRoutes);
+
+  // Bull Board Dashboard (Protected by HTTP Basic Auth with route-specific CSP adjustment for UI assets)
+  app.use(
+    '/admin/queues',
+    (req, res, next) => {
+      res.removeHeader('Content-Security-Policy');
+      next();
+    },
+    bullBoardAuth,
+    serverAdapter.getRouter()
+  );
 
   // Global Error Handler
   app.use(errorHandler);

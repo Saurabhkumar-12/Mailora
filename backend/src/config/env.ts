@@ -19,6 +19,8 @@ const envSchema = z.object({
   MAX_EMAILS_PER_HOUR: z.string().default('100').transform((val) => Math.max(1, parseInt(val, 10) || 100)),
   ELASTICSEARCH_NODE: z.string().url('ELASTICSEARCH_NODE must be a valid URL').optional(),
   ELASTICSEARCH_API_KEY: z.string().min(1, 'ELASTICSEARCH_API_KEY cannot be empty').optional(),
+  BULL_BOARD_USER: z.string().min(1, 'BULL_BOARD_USER is required'),
+  BULL_BOARD_PASS: z.string().min(1, 'BULL_BOARD_PASS is required'),
 });
 
 

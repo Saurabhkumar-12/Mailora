@@ -18,6 +18,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@bull-board/api": "^9.9.0",
+    "@bull-board/express": "^9.9.0",
     "@elastic/elasticsearch": "^9.5.1",
     "@prisma/client": "^6.4.1",
     "bullmq": "^6.3.4",
